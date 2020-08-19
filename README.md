@@ -12,6 +12,7 @@
 1. This is just an add on. it works in conjunction with the plugin mentioned above
 
 # TODO
-1. any improvements are much appreciated
+1. implement authorization checking in checkBeyonicPermissionsWCJohnie function
+2. any improvements are much appreciated
 
 
