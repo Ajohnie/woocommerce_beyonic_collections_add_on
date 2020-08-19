@@ -9,26 +9,23 @@ Version: 1.0
 Text Domain: beyonic_gateways
 */
 
-if (!defined('ABSPATH')) {
-    exit; // Exit if accessed directly
-}
-
 // register routes after initialisation of wp
-add_action('init', 'registerRoutes');
-function registerRoutes()
+add_action('init', 'registerRoutesWCJohnie');
+function registerRoutesWCJohnie()
 {
+    // register custom routes to handle collection requests
+    register_rest_route('beyonic-api', '/collections', array(
+        'methods' => WP_REST_Server::ALLMETHODS,
+        'callback' => 'handleCollectionWCJohnie',
+        'permission_callback' => 'checkBeyonicPermissionsWCJohnie',
+    ));
+
     // check if default query param for wc_beyonic plugin is passed
-    if (isset($_GET['beyonic_ipn']) && $_GET['beyonic_ipn'] == 1) {
+    if (isset($_REQUEST['beyonic_ipn']) && $_REQUEST['beyonic_ipn'] == 1) {
         $req = new WP_REST_Request();
         $req->set_body_params($_REQUEST);
-        handleCollection($req);
+        handleCollectionWCJohnie($req);
     }
-    // register custom routes to handle collection requests
-    register_rest_route('beyonic_api', '/collections', array(
-        'methods' => WP_REST_Server::ALLMETHODS,
-        'callback' => 'handleCollection',
-        'permission_callback' => 'checkBeyonicPermissions',
-    ));
 }
 
 global $woocommerce; // reference woocommerce
@@ -37,12 +34,12 @@ global $woocommerce; // reference woocommerce
  * @param $array
  * @return stdClass
  */
-function arrayToObject($array)
+function arrayToObjectWCJohnie($array)
 {
     $object = new stdClass();
     foreach ($array as $key => $value) {
         if (is_array($value)) {
-            $object->$key = arrayToObject($value);
+            $object->$key = arrayToObjectWCJohnie($value);
         } else {
             $object->$key = $value;
         }
@@ -55,7 +52,7 @@ function arrayToObject($array)
  *
  * @return WP_Error|WP_HTTP_Response|WP_REST_Response
  */
-function handleCollection($request)
+function handleCollectionWCJohnie($request)
 {
     $response = rest_ensure_response(new WP_REST_Response('Ok !', 200));
 
@@ -74,7 +71,7 @@ function handleCollection($request)
         $body = json_decode($body, false); // change to object
     }
     if (is_array($body)) { // change to object
-        $body = arrayToObject($body);
+        $body = arrayToObjectWCJohnie($body);
     }
 
     $event = strtolower($body->hook->event);
@@ -84,27 +81,31 @@ function handleCollection($request)
     if ($event === 'collection.received') {
         $collection_request = $body->data->collection_request;
     }
-    if ($event === 'collectionrequest.changed') {
+    if ($event === 'collectionrequest.status.changed') {
         $collection_request = $body->data;
     }
+    $resp = 'Wakanda Is Thinking !';
     if ($collection_request) {
         //get order id from collection request
         $wc_beyonic = new Beyonic_Woo_Gw();
         $wc_beyonic->authorize_beyonic_gw();
         $collection_request = Beyonic_Collection_Request::get($collection_request->id);
         $order_id = (int)($collection_request->metadata->order_id);
-        $status = checkStatus($collection_request->status);
+        $status = checkStatusWCJohnie($collection_request->status);
+
         if ($status > 0 && isset($order_id)) {
             $order = new WC_Order($order_id);
             if ($status === 1) {
+                $resp = 'Wakanda Succeeded !';
                 $order->update_status('processing');
             }
             if ($status === 2) {
+                $resp = 'Wakanda Failed !';
                 $order->update_status('cancelled');
             }
         }
     }
-    $response->set_data('Wakanda Forever !');
+    $response->set_data($resp);
     return $response;
 }
 
@@ -114,7 +115,7 @@ function handleCollection($request)
  * @param $request WP_REST_Request
  * @return boolean
  */
-function checkBeyonicPermissions($request)
+function checkBeyonicPermissionsWCJohnie($request)
 {
     // TODO complete this
     $auth = $request->get_header('authorization');
@@ -127,7 +128,7 @@ function checkBeyonicPermissions($request)
  * @param $status string
  * @return int // 0, 1 ,2
  */
-function checkStatus($status)
+function checkStatusWCJohnie($status)
 {
     $status = sanitize_text_field($status);
     switch (strtolower($status)) {
