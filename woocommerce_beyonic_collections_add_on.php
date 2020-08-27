@@ -9,6 +9,18 @@ Version: 1.0
 Text Domain: beyonic_gateways
 */
 
+
+//link to woocommerce settings
+function woocommerce_collections_add_on_settings_link($links)
+{
+    $link = admin_url('admin.php?page=wc-settings&tab=checkout');
+    $links[] = '<a href="' . $link . '">Payment Settings</a>';
+    return $links;
+}
+
+$plugin = plugin_basename(__FILE__);
+add_filter("plugin_action_links_$plugin", 'woocommerce_collections_add_on_settings_link');
+
 // register routes after initialisation of wp
 add_action('init', 'registerRoutesWCJohnie');
 function registerRoutesWCJohnie()
